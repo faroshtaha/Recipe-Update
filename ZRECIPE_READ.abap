@@ -23,13 +23,6 @@ FUNCTION ZRECIPE_READ.
 *"      SAVE_ERROR
 *"----------------------------------------------------------------------
 *----------------------------------------------------------------------*
-* Function Group  : ZPTS_02784_RECIPE                                  *
-* Title           : FM to update Phases in recipe                      *
-* Creation Date   : 21-May-2021                                        *
-* Developer       : EYD9748                                            *
-* SAP Release     : SAP ECC 6.0                                        *
-* Transport No.   : EE1K972672                                         *
-*----------------------------------------------------------------------*
 * Description     : The purpose of this FM is to update Phases in a    *
 *                   recipe. Currently the FM is only capable of        *
 *                   changing Std Value 1 (VGW01), but the FM can be    *
@@ -42,11 +35,6 @@ FUNCTION ZRECIPE_READ.
 *                   2) Set the corresponding update field VGW02_X with *
 *                      'X', so that only VGW02 will be updated         *
 *----------------------------------------------------------------------*
-* Modification History:                                                *
-* =====================                                                *
-* Date       User         Transport   RICEF#   Description             *
-* ====       ====         =========   ======   =============           *
-* 21/05/2021 EYD9748      EE1K972672  02784   Initial Development      *
 *----------------------------------------------------------------------*
 
 *--------------------------------------------------------------------*
