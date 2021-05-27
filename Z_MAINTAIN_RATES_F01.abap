@@ -1,6 +1,13 @@
 *&---------------------------------------------------------------------*
-*&  Include           Z_MAINTAIN_RATES_F01
+*&  Include           ZPTS_02784_MAINT_OMP_RATES_F01
 *&---------------------------------------------------------------------*
+*----------------------------------------------------------------------*
+* Program         : ZPTS_02784_MAINT_OMP_RATES_F01                     *
+* Title           : Mass Update Master Recipe Rates                    *
+* Creation Date   : 26-May-2021                                        *
+* Developer       : EYD9748                                            *
+* SAP Release     : SAP ECC 6.0                                        *
+* Transport No.   : EE1K972672                                         *
 *----------------------------------------------------------------------*
 * Description     : The purpose of this program is to update Std.Rate 1*
 *                   of phases in recipes in C202                       *
@@ -9,6 +16,7 @@
 * =====================                                                *
 * Date       User         Transport   RICEF#   Description             *
 * ====       ====         =========   ======   =============           *
+* 26/05/2021 EYD9748      EE1K972672  02784   Initial Development      *
 *----------------------------------------------------------------------*
 *&---------------------------------------------------------------------*
 *&      Form  F_GET_DATA
@@ -17,7 +25,17 @@ FORM f_get_data .
   DATA: lt_phase TYPE mrtrsty_plpo_ph.
   DATA: lw_mapl     LIKE LINE OF t_mapl,
         lw_output   TYPE type_output,
-        lw_phase    LIKE LINE OF lt_phase.
+        lw_phase    LIKE LINE OF lt_phase,
+        lw_r_ktsch  LIKE LINE OF r_ktsch,
+        lw_ktsch_f4 LIKE LINE OF t_ktsch_f4.
+
+  CLEAR: r_ktsch, lw_r_ktsch.
+  lw_r_ktsch-sign = 'I'.
+  lw_r_ktsch-option = 'EQ'.
+  LOOP AT t_ktsch_f4 INTO lw_ktsch_f4 WHERE vlsch IN so_ktsch.
+    MOVE: lw_ktsch_f4-vlsch TO lw_r_ktsch-low.
+    APPEND lw_r_ktsch TO r_ktsch.
+  ENDLOOP.
 
 *--------------------------------------------------------------------*
 *  Get MAPL data
@@ -63,18 +81,20 @@ FORM f_get_data .
           save_error         = 10
           OTHERS             = 11.
       IF sy-subrc IS INITIAL.
-        LOOP AT lt_phase INTO lw_phase.
+        LOOP AT lt_phase INTO lw_phase WHERE ktsch IN r_ktsch.
           CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
             EXPORTING
               input  = lw_mapl-matnr
             IMPORTING
               output = lw_output-matnr.
-          lw_output-plnnr = lw_mapl-plnnr.
-          lw_output-plnal = lw_mapl-plnal.
-          lw_output-ktsch = lw_phase-ktsch.
-          lw_output-vgw01 = lw_phase-vgw01.
-          lw_output-vornr = lw_phase-vornr.
-          lw_output-werks = lw_mapl-werks.
+          lw_output-plnnr = lw_mapl-plnnr.  "Recipe Group
+          lw_output-plnal = lw_mapl-plnal.  "Recipe
+          lw_output-werks = lw_mapl-werks.  "Plant
+          lw_output-ktsch = lw_phase-ktsch. "Std Text Key
+          lw_output-ltxa1 = lw_phase-ltxa1. "Std Text Key Description
+          lw_output-vgw01 = lw_phase-vgw01. "Std Rate
+          lw_output-vornr = lw_phase-vornr. "Operation
+          lw_output-pvznr = lw_phase-pvznr. "Superordinate Operation
           APPEND lw_output TO t_output.
         ENDLOOP.
       ENDIF.
@@ -92,45 +112,80 @@ ENDFORM.                    " F_ALV
 *&      Form  F_PREPARE_FCAT
 *&---------------------------------------------------------------------*
 FORM f_prepare_fcat .
-  DATA: lw_fcat LIKE LINE OF t_fcat.
-  lw_fcat-col_pos = '1' . "Specify position of a field
+  DATA: lw_fcat LIKE LINE OF t_fcat,
+        lv_col_pos TYPE sy-cucol VALUE '1'.
+
+  lw_fcat-col_pos = lv_col_pos . "Specify position of a field
   lw_fcat-fieldname = 'MATNR' . "Specify field name
   lw_fcat-tabname = 'T_OUTPUT' . "Specify internal table name
-  lw_fcat-seltext_m = 'Material' . "Specify text to display column header
+  lw_fcat-ref_tabname = 'MAPL'.
+  lw_fcat-ref_fieldname = 'MATNR'.
   APPEND lw_fcat TO t_fcat . "Append to field catalog internal table
   CLEAR lw_fcat.
+  lv_col_pos = lv_col_pos + 1.
 
-  lw_fcat-col_pos = '2' . "Specify position of a field
+  lw_fcat-col_pos = lv_col_pos . "Specify position of a field
   lw_fcat-fieldname = 'PLNNR' . "Specify field name
   lw_fcat-tabname = 'T_OUTPUT' . "Specify internal table name
   lw_fcat-seltext_m = 'Recipe Group' . "Specify text to display column header
   APPEND lw_fcat TO t_fcat . "Append to field catalog internal table
   CLEAR lw_fcat.
+  lv_col_pos = lv_col_pos + 1.
 
-  lw_fcat-col_pos = '3' . "Specify position of a field
+  lw_fcat-col_pos = lv_col_pos . "Specify position of a field
   lw_fcat-fieldname = 'PLNAL' . "Specify field name
   lw_fcat-tabname = 'T_OUTPUT' . "Specify internal table name
   lw_fcat-seltext_m = 'Recipe' . "Specify text to display column header
   APPEND lw_fcat TO t_fcat . "Append to field catalog internal table
   CLEAR lw_fcat.
+  lv_col_pos = lv_col_pos + 1.
 
-  lw_fcat-col_pos = '4' . "Specify position of a field
-  lw_fcat-fieldname = 'KTSCH' . "Specify field name
+  lw_fcat-col_pos = lv_col_pos . "Specify position of a field
+  lw_fcat-fieldname = 'PVZNR' . "Specify field name
   lw_fcat-tabname = 'T_OUTPUT' . "Specify internal table name
-  lw_fcat-seltext_m = 'Text' . "Specify text to display column header
+  lw_fcat-ref_tabname = 'MRTRSS_PLPO_PH'.
+  lw_fcat-ref_fieldname = 'PVZNR'.
   APPEND lw_fcat TO t_fcat . "Append to field catalog internal table
   CLEAR lw_fcat.
+  lv_col_pos = lv_col_pos + 1.
 
-  lw_fcat-col_pos = '5' . "Specify position of a field
+  lw_fcat-col_pos = lv_col_pos . "Specify position of a field
+  lw_fcat-fieldname = 'VORNR' . "Specify field name
+  lw_fcat-tabname = 'T_OUTPUT' . "Specify internal table name
+  lw_fcat-ref_tabname = 'PLPO'.
+  lw_fcat-ref_fieldname = 'VORNR'.
+  APPEND lw_fcat TO t_fcat . "Append to field catalog internal table
+  CLEAR lw_fcat.
+  lv_col_pos = lv_col_pos + 1.
+
+  lw_fcat-col_pos = lv_col_pos . "Specify position of a field
+  lw_fcat-fieldname = 'KTSCH' . "Specify field name
+  lw_fcat-tabname = 'T_OUTPUT' . "Specify internal table name
+  lw_fcat-ref_tabname = 'PLPO'.
+  lw_fcat-ref_fieldname = 'KTSCH'.
+  APPEND lw_fcat TO t_fcat . "Append to field catalog internal table
+  CLEAR lw_fcat.
+  lv_col_pos = lv_col_pos + 1.
+
+  lw_fcat-col_pos = lv_col_pos . "Specify position of a field
+  lw_fcat-fieldname = 'LTXA1' . "Specify field name
+  lw_fcat-tabname = 'T_OUTPUT' . "Specify internal table name
+  lw_fcat-ref_tabname = 'PLPO'.
+  lw_fcat-ref_fieldname = 'LTXA1'.
+  APPEND lw_fcat TO t_fcat . "Append to field catalog internal table
+  CLEAR lw_fcat.
+  lv_col_pos = lv_col_pos + 1.
+
+  lw_fcat-col_pos = lv_col_pos . "Specify position of a field
   lw_fcat-fieldname = 'VGW01' . "Specify field name
   lw_fcat-tabname = 'T_OUTPUT' . "Specify internal table name
   lw_fcat-ref_tabname = 'PLPO' . "Specify Reference Table name
   lw_fcat-ref_fieldname = 'VGW01' . "Specify Reference field name
-  lw_fcat-seltext_m = 'Rate' . "Specify text to display column header
 *  lw_fcat-checkbox = 'X'.
   lw_fcat-edit = 'X'.
   APPEND lw_fcat TO t_fcat . "Append to field catalog internal table
   CLEAR lw_fcat.
+  lv_col_pos = lv_col_pos + 1.
 ENDFORM.                    " F_PREPARE_FCAT
 *&---------------------------------------------------------------------*
 *&      Form  F_DISPLAY_ALV
@@ -296,3 +351,70 @@ FORM f_top_of_page.
     EXPORTING
       it_list_commentary = lt_header.
 ENDFORM.                    "f_top_of_page
+*&---------------------------------------------------------------------*
+*&      Form  F_KTSCH_F4
+*&---------------------------------------------------------------------*
+FORM f_ktsch_f4 .
+  DATA: lw_ktsch_return LIKE LINE OF t_ktsch_return.
+
+  CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+    EXPORTING
+      retfield        = 'VLSCH'
+      value_org       = 'S'
+    TABLES
+      value_tab       = t_ktsch_f4
+      return_tab      = t_ktsch_return
+    EXCEPTIONS
+      parameter_error = 1
+      no_values_found = 2
+      OTHERS          = 3.
+  IF sy-subrc IS INITIAL.
+    READ TABLE t_ktsch_return INTO lw_ktsch_return INDEX 1.
+    IF sy-subrc IS INITIAL.
+      so_ktsch-low = lw_ktsch_return-fieldval.
+    ENDIF.
+  ENDIF.
+ENDFORM.                    " F_KTSCH_F4
+*&---------------------------------------------------------------------*
+*&      Form  F_VALIDATE_KTSCH
+*&---------------------------------------------------------------------*
+FORM f_validate_ktsch .
+  DATA: lt_ktsch_zbc TYPE STANDARD TABLE OF zbc_const-low.
+  SELECT  low
+    FROM zbc_const
+    INTO TABLE lt_ktsch_zbc
+      WHERE progname EQ 'ZPTS_02784_MAINT_OMP_RATES'
+        AND fieldname EQ 'ZOMP'
+        AND low IN so_ktsch.
+  IF sy-subrc IS NOT INITIAL.
+    MESSAGE e001(00) WITH 'Invalid Standard Text Key'.
+  ENDIF.
+ENDFORM.                    " F_VALIDATE_KTSCH
+*&---------------------------------------------------------------------*
+*&      Form  F_INIT
+*&---------------------------------------------------------------------*
+FORM f_init .
+*--------------------------------------------------------------------*
+*  Below select queries are to initialize Std Text Key internal tables
+*  which will be used for F4. Only values maintained in ZBC_CONST
+*  ZPTS_02784_MAINT_OMP_RATES/ZOMP are allowed.
+*--------------------------------------------------------------------*
+  SELECT  progname
+          fieldname
+          low
+          FROM zbc_const
+          INTO TABLE t_zbc_const_ktsch
+            WHERE progname  EQ 'ZPTS_02784_MAINT_OMP_RATES'
+              AND fieldname EQ 'ZOMP'.
+  IF sy-subrc IS INITIAL.
+*--------------------------------------------------------------------*
+*  This is to get description of the Std Text Key
+*--------------------------------------------------------------------*
+    SELECT  vlsch
+            txt
+            FROM t435t
+            INTO TABLE t_ktsch_f4
+            FOR ALL ENTRIES IN t_zbc_const_ktsch
+              WHERE vlsch EQ t_zbc_const_ktsch-low.
+  ENDIF.
+ENDFORM.                    " F_INIT
