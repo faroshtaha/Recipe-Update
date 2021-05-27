@@ -5,5 +5,5 @@ OMP needs planning rate data to be to maintained separately from the current pla
 
 Instead, new recipe master maintenance transaction is required which will allow the Planner to only change their specific OMP planning speed data in the recipe data structure.
 
-The main ABAP program, Z_MAINTAIN_RATES, is currently equipped to update only Std Value 1 (PLPO-VGW01). This program is using two custom FMs (READ and UPDATE). The FM UPDATE is currently only capable of updating the Std Rates (VGW01 to VGW06), but in future this FM can be enhanced to update other PLPO fields as well.
+The main ABAP program, Z_MAINTAIN_RATES, is currently equipped to update only Std Value 1 (PLPO-VGW01). This program is using two custom FMs ZRECIPE_UPD (for updating the recipes) and ZRECIPE_READ (for reading the recipes into corresponding data structures which will be used for populating the ALV output). The FM ZRECIPE_UPD is currently only capable of updating the Std Rates (VGW01 to VGW06), but in future this FM can be enhanced to update other PLPO fields as well.
 
